@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "@vueuse/motion": "^3.0.3",
+    "animate.css": "^4.1.1"
+  }
+}
