@@ -2,32 +2,11 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import 'video.js/dist/video-js.css'
 import videojs from 'video.js'
-import axios from 'axios'
 
 const replays = ref([])
 const loading = ref(true)
 const error = ref(null)
-const currentVideoId = ref(null) // 新增当前视频ID
-const comments = ref([]) // 清空测试数据
-const newComment = ref('')
-const currentUser = ref(window.currentUser || '匿名用户')
-
-//播放器初始化
-/*const playerOptions = ref({
-  autoplay: false,
-  controls: true,
-  fluid: false,
-  responsive: false,
-  controlBar: {
-    progressControl: true,
-    remainingTimeDisplay: false
-  },
-  sources: [{
-    type: "video/mp4",
-    src: ""
-  }]
-})*/
-
+//testtesttest
 // 从API获取回放数据
 const fetchReplays = async (type = 'all') => {
   try {
@@ -38,10 +17,9 @@ const fetchReplays = async (type = 'all') => {
       apiUrl = 'http://localhost:9150/api/replay/getEveningReplay';
     }
 
-    console.log('Api to request:', apiUrl)
-    const response = await axios.get(apiUrl);
-    if (response.status !== 200) throw new Error('获取回放数据失败')
-    const data = response.data
+    const response = await fetch(apiUrl);
+    if (!response.ok) throw new Error('获取回放数据失败')
+    const data = await response.json()
     console.log('API返回的数据:', data)
     console.log('API返回的数据长度:', data.length)
 
@@ -50,8 +28,10 @@ const fetchReplays = async (type = 'all') => {
       console.log('第一个数据项类型:', typeof data[0])
     }
 
+    // 确认每一项都是一个字符串
     if (data.every(item => typeof item === 'string')) {
       replays.value = data.map(item => {
+        // 使用正则表达式提取键值对
         const keyValuePairs = item.split(',').map(pair => pair.trim().split(': '))
         const replay = {}
         keyValuePairs.forEach(pair => {
@@ -79,26 +59,14 @@ const fetchReplays = async (type = 'all') => {
   }
 }
 
-// 获取评论方法
-const fetchComments = async (videoId) => {
-  try {
-    const response = await axios.get(`http://localhost:9150/api/comment/getComments/${videoId}`)
-    comments.value = response.data.map(comment => {
-      const [id, userId, content, time] = comment.split('|')
-      return { id, user: userId, content, time }
-    })
-  } catch (err) {
-    console.error('获取评论失败:', err)
-    error.value = '获取评论失败'
-  }
-}
+
 
 onMounted(() => {
   fetchReplays()
   player = videojs('my-video', {
     controls: true,
-    width:800,
-    height:580,
+    fluid: true,
+    responsive: true
   })
 })
 
@@ -110,31 +78,42 @@ onBeforeUnmount(() => {
 })
 
 // 筛选后的回放列表
-const filterType = ref('all')
-const filterDate = ref('')
-let player = null
+const filterType = ref('all')  // 添加这行，定义filterType
+const filterDate = ref('')     // 添加这行，定义filterDate
+let player = null              // 确保player定义在顶部
 
+// 修改筛选后的回放列表逻辑
 const filteredReplays = computed(() => {
   return replays.value.filter(item => {
     const typeMatch = filterType.value === 'all' || item.type === filterType.value
-    const dateMatch = !filterDate.value || item.date.includes(filterDate.value)
+    const dateMatch = !filterDate.value || item.date.includes(filterDate.value) // 修改为includes匹配
     return typeMatch && dateMatch
   })
 })
 
-// 修改后的播放视频函数
+// 修改播放视频函数，增加空值检查
+// 修改播放视频函数，改为发送GET请求获取视频流
 const playVideo = async (id, title) => {
   if (!player || !id) return;
 
   try {
+    // 显示加载状态
     loading.value = true;
     error.value = null;
-    currentVideoId.value = id
+
+    // 发送请求获取视频流
+    const response = await fetch(`http://localhost:9150/api/replay/playReplay/${id}`);
+
+    if (!response.ok) throw new Error('获取视频流失败');
+
+    // 创建视频URL
     const videoUrl = `http://localhost:9150/api/replay/playReplay/${id}`;
+
+    // 设置视频源并播放
     player.src({ type: 'video/mp4', src: videoUrl });
     player.play();
     document.getElementById('videoInfo').textContent = title;
-    await fetchComments(id) // 播放时获取评论
+
   } catch (err) {
     console.error('播放视频时出错:', err);
     error.value = '播放视频失败: ' + err.message;
@@ -143,36 +122,23 @@ const playVideo = async (id, title) => {
   }
 }
 
-// 修改后的提交评论方法
-const submitComment = async () => {
-  if (!newComment.value.trim() || !currentVideoId.value) return
-  
-  try {
-    const currentUser = window.currentUser || '匿名用户'
-    await axios.post('http://localhost:9150/api/comment/sendComment', {
-      video_id: currentVideoId.value,
-      user_id: currentUser,
-      content: newComment.value.trim()
-    })
-    
-    await fetchComments(currentVideoId.value)
-    newComment.value = ''
-  } catch (err) {
-    console.error('提交评论失败:', err)
-    error.value = '评论发送失败，请稍后重试'
-  }
-}
+// 添加 comments 定义
+const comments = ref([
+  { id: 1, user: '小羽毛123', content: '这场打字回放太精彩了！', time: '2024-03-10 14:30' },
+  { id: 2, user: '咕咕粉丝', content: '期待下次直播~', time: '2024-03-10 15:00' }
+])
 
-// 新增删除评论方法
-const deleteComment = async (commentId) => {
-  try {
-    await axios.post('http://localhost:9150/api/comment/deleteComment', {
-      comment_id: commentId
+const newComment = ref('')
+
+const submitComment = () => {
+  if (newComment.value.trim()) {
+    comments.value.push({
+      id: comments.value.length + 1,
+      user: '匿名用户',
+      content: newComment.value.trim(),
+      time: new Date().toLocaleString()
     })
-    await fetchComments(currentVideoId.value)
-  } catch (err) {
-    console.error('删除评论失败:', err)
-    error.value = '删除评论失败'
+    newComment.value = ''
   }
 }
 </script>
@@ -199,6 +165,7 @@ const deleteComment = async (commentId) => {
         </div>
 
         <template class="replay-list">
+          <!-- 添加加载状态和错误提示 -->
           <div v-if="loading" class="loading">加载中...</div>
           <div v-else-if="error" class="error">{{ error }}</div>
           <template v-else>
@@ -226,43 +193,37 @@ const deleteComment = async (commentId) => {
                 {{ item.duration }}
               </div>
             </div>
-          </template>
+          </template>  <!-- 这是正确的replay-list闭合标签 -->
         </template>
+        </div>
       </div>
-    </div>
 
-    <div class="comment-section">
-      <h4>羽毛留言板（{{ comments.length }}）</h4>
-      <div class="comment-input">
-        <textarea
-            v-model="newComment"
-            placeholder="留下你的爪印吧~ (✧ω✧)"
-            rows="3"
-        ></textarea>
-        <button @click="submitComment" class="comment-btn">咻咻~评论发送！</button><br><br><br>
-      </div>
-      <div class="comment-list">
-        <div
-            v-for="comment in comments"
-            :key="comment.id"
-            class="comment-item"
-        >
-        <div class="comment-header">
-  <span class="comment-user">{{ comment.user }}</span>
-  <span class="comment-time">{{ comment.time }}</span>
-  <button 
-    v-if="currentUser === comment.user"
-    @click.stop="deleteComment(comment.id)"
-    class="delete-btn"
-  >
-    删除
-  </button>
-</div>
-          <div class="comment-content">{{ comment.content }}</div>
+      <div class="comment-section">
+        <h4>羽毛留言板（{{ comments.length }}）</h4>
+        <div class="comment-input">
+          <textarea
+              v-model="newComment"
+              placeholder="留下你的爪印吧~ (✧ω✧)"
+              rows="3"
+          ></textarea>
+          <button @click="submitComment" class="comment-btn">咻咻~评论发送！</button><br><br><br>
+        </div>
+        <div class="comment-list">
+          <div
+              v-for="comment in comments"
+              :key="comment.id"
+              class="comment-item"
+          >
+            <div class="comment-header">
+              <span class="comment-user">{{ comment.user }}</span>
+              <span class="comment-time">{{ comment.time }}</span>
+            </div>
+            <div class="comment-content">{{ comment.content }}</div>
+          </div>
         </div>
       </div>
     </div>
-  </div>
+
 </template>
 
 <style scoped>
@@ -323,12 +284,9 @@ nav {
 }
 
 .video-container {
-   background-color: #000;
+  background-color: #000;
   border-radius: 8px;
   overflow: hidden;
-  width: 800px;      /* 固定宽度 */
-  height: 580px;     /* 固定高度 */
-  margin: 0 auto;    /* 居中显示 */
 }
 
 .video-info {
@@ -339,6 +297,7 @@ nav {
   color: #333;
 }
 
+/* 回放列表样式 */
 .replay-list {
   background-color: rgba(255, 255, 255, 0.9);
   padding: 15px;
@@ -387,6 +346,7 @@ nav {
   margin-top: 5px;
 }
 
+/* 筛选器样式 */
 .soft-filter {
   flex: 1;
   min-width: 150px;
@@ -409,6 +369,7 @@ nav {
   0 4px 10px rgba(0, 0, 0, 0.12);
 }
 
+/* 评论区样式 */
 .comment-section {
   margin-top: 30px;
   background: rgba(255, 255, 255, 0.9);
@@ -498,19 +459,7 @@ nav {
   line-height: 1.5;
 }
 
-.delete-btn {
-  color: #db6677;
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 2px 6px;
-  border-radius: 4px;
-}
-
-.delete-btn:hover {
-  background: rgba(219, 102, 119, 0.1);
-}
-
+/* 移动端适配 */
 @media (max-width: 768px) {
   .content-container {
     grid-template-columns: 1fr;
@@ -536,7 +485,6 @@ nav {
     float: none;
   }
 }
-
 .content-container,
 .comment-section {
   opacity: 0;
@@ -572,11 +520,13 @@ nav {
   }
 }
 
+/* 为列表项添加延迟动画 */
 .replay-item:nth-child(1) { animation-delay: 0.4s; }
 .replay-item:nth-child(2) { animation-delay: 0.5s; }
 .replay-item:nth-child(3) { animation-delay: 0.6s; }
 .replay-item:nth-child(n+4) { animation-delay: 0.7s; }
 
+/* 视频容器单独动画 */
 .video-container {
   opacity: 0;
   transform: translateY(30px);
@@ -584,6 +534,7 @@ nav {
   animation-delay: 0.2s;
 }
 
+/* 评论区输入框动画 */
 .comment-input {
   opacity: 0;
   animation: fadeIn 0.4s ease-out forwards;
@@ -595,3 +546,4 @@ nav {
   to { opacity: 1; }
 }
 </style>
+
