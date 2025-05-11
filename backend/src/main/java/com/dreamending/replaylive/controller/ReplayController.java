@@ -29,4 +29,8 @@ import org.springframework.web.bind.annotation.*;
     public Object playReplay(@PathVariable String id) {
         return replayService.playReplay(id);
     }
+    @GetMapping("/playReplay_NoVerify/{id}")
+    public Object playReplay_NoVerify(@PathVariable String id) {
+        return replayService.playReplay(id);
+    }
 }

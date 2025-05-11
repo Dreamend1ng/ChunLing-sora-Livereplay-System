@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
+import jakarta.servlet.http.HttpSession;
 
 @RestController
 @RequestMapping("/api/user")
@@ -17,34 +18,22 @@ public class UserController {
         return userService.getAllUser();
     }
     @PostMapping("/login")
-    public String login(@RequestBody Map<String, String> loginRequest) {
+    public String login(@RequestBody Map<String, String> loginRequest, HttpSession session) {
         String username = loginRequest.get("username");
         String password = loginRequest.get("password");
 
         boolean isValid = userService.validatePassword(username, password);
-        return isValid ? "1" : "0";
+        if (isValid) {
+            session.setAttribute("username", username);
+            return "1";
+        }
+        return "0";
     }
-    @PostMapping("/register")
-    public String register(@RequestBody Map<String, String> registerRequest) {
-        String username = registerRequest.get("username");
-        String password = registerRequest.get("password");
-        String mail = registerRequest.get("mail");
 
-        // 基本参数校验
-        if (username == null || username.isEmpty() ||
-            password == null || password.isEmpty() ||
-            mail == null || mail.isEmpty()) {
-            return "0"; // 参数不完整
-        }
-        // 调用注册服务
-        boolean isSuccess = userService.registerUser(username, password, mail);
-        return isSuccess ? "1" : "0";
-    }
-    @GetMapping("/roleCheck")
-    public String roleCheck(@RequestParam String username) {  // 添加请求参数
-        if (username == null || username.isEmpty()) {
-            return "0";  // 空值校验
-        }
-        return userService.roleCheck(username) ? "1" : "0";  // 调用服务层方法
+    @GetMapping("/currentUser")
+    public String getCurrentUser(HttpSession session) {
+        String username = (String) session.getAttribute("username");
+        System.out.println("Login in:" + username);
+        return username != null ? username : "0";
     }
 }

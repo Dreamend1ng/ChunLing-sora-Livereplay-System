@@ -1,5 +1,6 @@
 package com.dreamending.replaylive.controller;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.web.bind.annotation.*;
 
 /*
@@ -31,9 +32,14 @@ public class CommentController {
        return commentService.getAllComments();
    }
    @PostMapping("/sendComment")
-   public void sendComment(String video_id, String user_id, String content) {
-       commentService.sendComment(video_id, user_id, content);
+   public void sendComment( @RequestBody JsonNode request) {
+       commentService.sendComment(
+               request.get("video_id").asText(),
+               request.get("user_id").asText(),
+               request.get("content").asText()
+       );
    }
+
     @PostMapping("/deleteComment")
     public void delComment(String comment_id) {
         commentService.delComment(comment_id);

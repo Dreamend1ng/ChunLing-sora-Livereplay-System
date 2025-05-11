@@ -1,6 +1,10 @@
 package com.dreamending.replaylive.entity;
 
+import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.TableId;
+import java.util.Date;
+import java.util.Random;
 
 /*
     @com.dreamending.replaylive.entity
@@ -9,12 +13,12 @@ import com.baomidou.mybatisplus.annotation.TableName;
 */
 @TableName("cl_comment")
 public class Comment {
+    @TableId(type = IdType.INPUT)
     public String comment_id;
     public String username;
     public String video_id;
     public String comment;
-    public long comment_time;
-    public int zan;
+    public Date comment_time;
 
     @Override
     public String toString() {
@@ -24,8 +28,13 @@ public class Comment {
                 ", video_id='" + video_id + '\'' +
                 ", comment='" + comment + '\'' +
                 ", comment_time=" + comment_time +
-                ", zan=" + zan +
                 '}';
+    }
+    public Comment() {
+        // 生成时间戳基础ID（格式：时间戳_随机数）
+        long timestamp = System.currentTimeMillis();
+        int random = new Random().nextInt(9999);
+        this.comment_id = String.format("%d_%04d", timestamp, random);
     }
 
     public String getUsername() {
@@ -36,28 +45,12 @@ public class Comment {
         this.username = username;
     }
 
-    public int getZan() {
-        return zan;
-    }
-
-    public void setZan(int zan) {
-        this.zan = zan;
-    }
-
     public String getComment_id() {
         return comment_id;
     }
 
     public void setComment_id(String comment_id) {
         this.comment_id = comment_id;
-    }
-
-    public String getusername() {
-        return username;
-    }
-
-    public void setusername(String username) {
-        this.username = username;
     }
 
     public String getVideo_id() {
@@ -76,11 +69,11 @@ public class Comment {
         this.comment = comment;
     }
 
-    public long getComment_time() {
+    public Date getComment_time() {
         return comment_time;
     }
 
-    public void setComment_time(long comment_time) {
+    public void setComment_time(Date comment_time) {
         this.comment_time = comment_time;
     }
 

@@ -3,21 +3,27 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-/*
-    @com.dreamending.replaylive.config
-    @Author: Sun Weize - 19393
-    @date 2025-04-03  13:10
-*/
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
-                .allowedOriginPatterns("*")  // 使用allowedOriginPatterns代替allowedOrigins
+                .allowedOriginPatterns("http://localhost:8080") // 改为具体的前端地址
                 .allowCredentials(true)
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                .allowedMethods("*")
                 .allowedHeaders("*")
                 .maxAge(3600);
+    }
+
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(new LoginInterceptor()) // 使用完整包路径
+                .addPathPatterns("/api/**")
+                .excludePathPatterns("/api/user/login",
+                                   "/api/user/register",
+                                   "/api/hello");
     }
 }
 
