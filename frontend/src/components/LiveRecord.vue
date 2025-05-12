@@ -83,13 +83,40 @@ const fetchReplays = async (type = 'all') => {
 const fetchComments = async (videoId) => {
   try {
     const response = await axios.get(`http://localhost:9150/api/comment/getComments/${videoId}`)
-    comments.value = response.data.map(comment => {
-      const [id, userId, content, time] = comment.split('|')
-      return { id, user: userId, content, time }
+    comments.value = response.data.map(commentStr => {
+      const comment = {}
+      commentStr.split(', ').forEach(pair => {
+        const [key, value] = pair.split(': ')  // 移除小写转换
+        comment[key] = value
+      })
+      return {
+        id: comment['commentID'], // 保持原始字段名称
+        user: comment['username'],
+        content: comment['comment'],
+        time: new Date(comment['comment_time']).toLocaleString()
+      }
     })
   } catch (err) {
     console.error('获取评论失败:', err)
     error.value = '获取评论失败'
+  }
+}
+
+// 新增删除评论方法
+const deleteComment = async (commentId) => {
+  try {
+    if (!commentId) {
+      throw new Error('无效的评论ID')
+    }
+    console.log('尝试删除评论ID:', commentId)
+    await axios.post('http://localhost:9150/api/comment/deleteComment', {
+      comment_id: commentId,
+    })
+    
+    await fetchComments(currentVideoId.value)
+  } catch (err) {
+    console.error('删除评论失败:', err)
+    error.value = '删除失败：' + (err.response?.data?.message || err.message)
   }
 }
 
@@ -160,19 +187,6 @@ const submitComment = async () => {
   } catch (err) {
     console.error('提交评论失败:', err)
     error.value = '评论发送失败，请稍后重试'
-  }
-}
-
-// 新增删除评论方法
-const deleteComment = async (commentId) => {
-  try {
-    await axios.post('http://localhost:9150/api/comment/deleteComment', {
-      comment_id: commentId
-    })
-    await fetchComments(currentVideoId.value)
-  } catch (err) {
-    console.error('删除评论失败:', err)
-    error.value = '删除评论失败'
   }
 }
 </script>
@@ -247,18 +261,20 @@ const deleteComment = async (commentId) => {
             :key="comment.id"
             class="comment-item"
         >
-        <div class="comment-header">
-  <span class="comment-user">{{ comment.user }}</span>
-  <span class="comment-time">{{ comment.time }}</span>
-  <button 
-    v-if="currentUser === comment.user"
-    @click.stop="deleteComment(comment.id)"
-    class="delete-btn"
-  >
-    删除
-  </button>
-</div>
-          <div class="comment-content">{{ comment.content }}</div>
+          <div class="comment-header">
+            <span class="comment-user">{{ comment.user }}</span>
+            <span class="comment-time">{{ comment.time }}</span>
+          </div>
+          <div class="comment-content">
+            {{ comment.content }}
+            <button 
+              v-if="currentUser === comment.user"
+              @click.stop="deleteComment(comment.id)"
+              class="delete-btn"
+            >
+              删除
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -479,7 +495,7 @@ nav {
 
 .comment-header {
   display: flex;
-  justify-content: space-between;
+  align-items: center;
   margin-bottom: 8px;
   font-size: 0.9em;
 }
@@ -487,24 +503,35 @@ nav {
 .comment-user {
   color: #db6677;
   font-weight: 500;
+  margin-right: 8px;
 }
 
 .comment-time {
   color: #999;
+  font-size: 0.8em;
 }
 
 .comment-content {
   color: #666;
   line-height: 1.5;
+  text-indent: 2em;
+  text-align: left;
+  position: relative;
+  min-height: 40px;  /* 保证单行评论也有足够空间 */
 }
 
 .delete-btn {
+  position: absolute;
+  right: 0;
+  bottom: 0;
   color: #db6677;
   background: none;
   border: none;
   cursor: pointer;
   padding: 2px 6px;
   border-radius: 4px;
+  font-size: 0.8em;
+  transform: translateY(25%); /* 微调垂直位置 */
 }
 
 .delete-btn:hover {
