@@ -41,7 +41,9 @@ public class CommentController {
    }
 
     @PostMapping("/deleteComment")
-    public void delComment(String comment_id) {
-        commentService.delComment(comment_id);
+    public void delComment( @RequestBody JsonNode request) {
+        commentService.delComment(
+                request.get("comment_id").asText()
+        );
     }
 }
