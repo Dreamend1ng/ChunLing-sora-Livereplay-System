@@ -24,11 +24,11 @@ public class CommentServiceImpl implements CommentService {
         return commentMapper.selectList(queryWrapper).stream()
                 .map(comment -> String.format(
                     "commentID: %s, username: %s, video_id: %s, comment: %s, comment_time: %s",
-                    comment.getComment_id(),
+                    comment.getCommentId(),
                     comment.getUsername(),
-                    comment.getVideo_id(),
+                    comment.getVideoId(),
                     comment.getComment(),
-                    comment.getComment_time()))
+                    comment.getCommentTime()))
                 .collect(Collectors.toList());
     }
 
@@ -40,21 +40,21 @@ public class CommentServiceImpl implements CommentService {
         return commentMapper.selectList(queryWrapper).stream()
                 .map(comment -> String.format(
                     "commentID: %s, username: %s, video_id: %s, comment: %s, comment_time: %s",
-                    comment.getComment_id(),
+                    comment.getCommentId(),
                     comment.getUsername(),
-                    comment.getVideo_id(),
+                    comment.getVideoId(),
                     comment.getComment(),
-                    comment.getComment_time()))
+                    comment.getCommentTime()))
                 .collect(Collectors.toList());
     }
 
     @Override
     public List<String> sendComment(String video_id, String user_id, String content) {
         Comment comment = new Comment();
-        comment.setVideo_id(video_id);
+        comment.setVideoId(video_id);
         comment.setUsername(user_id);
         comment.setComment(content);
-        comment.setComment_time(new Date());
+        comment.setCommentTime(new Date());
         commentMapper.insert(comment);
         return getComments(video_id);
     }
@@ -62,7 +62,10 @@ public class CommentServiceImpl implements CommentService {
     @Override
     public void delComment(String comment_id) {
         QueryWrapper<Comment> queryWrapper = new QueryWrapper<>();
+        System.out.println("Get Comment_id:\n" + comment_id);
         queryWrapper.eq("comment_id", comment_id);
+        System.out.println("Comment will delete:\n" + comment_id);
         commentMapper.delete(queryWrapper);
     }
 }
+
