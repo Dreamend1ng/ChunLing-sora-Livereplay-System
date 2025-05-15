@@ -62,7 +62,7 @@ public class ReplayServiceImpl implements ReplayService {
     @Override
     public List<String> getMorningReplay() {
         QueryWrapper<ReplayVideo> queryWrapper = new QueryWrapper<>();
-        queryWrapper.select("id", "live_date", "specialturn", "morning_or_evening")
+        queryWrapper.select("id", "live_date", "specialturn", "morning_or_evening", "livetitle")
                 .eq("morning_or_evening", 0);  // 只查询morningorevening=1的记录
 
         List<ReplayVideo> replays = replayMapper.selectList(queryWrapper);
@@ -79,7 +79,7 @@ public class ReplayServiceImpl implements ReplayService {
     @Override
     public List<String> getEveningReplay() {
         QueryWrapper<ReplayVideo> queryWrapper = new QueryWrapper<>();
-        queryWrapper.select("id", "live_date", "specialturn", "morning_or_evening")
+        queryWrapper.select("id", "live_date", "specialturn", "morning_or_evening", "livetitle")
                 .eq("morning_or_evening", 1);  // 只查询morningorevening=0的记录
 
         List<ReplayVideo> replays = replayMapper.selectList(queryWrapper);
@@ -94,18 +94,20 @@ public class ReplayServiceImpl implements ReplayService {
     }
 
     @Override
-    @Scheduled(initialDelay = 0, fixedRate = 180 * 1000) //测试，180s执行一次
-    //@Scheduled(initialDelay = 0, fixedRate = 6 * 60 * 60 * 1000)  // 每次启动应用程序的时候都自动运行一遍，随后每6小时运行一次
+    //@Scheduled(initialDelay = 0, fixedRate = 180 * 1000) //测试，180s执行一次
+    @Scheduled(initialDelay = 0, fixedRate = 6 * 60 * 60 * 1000)  // 每次启动应用程序的时候都自动运行一遍，随后每6小时运行一次
     public void AutoUpdateReplay() {
         File dir = new File(RECORD_DIR);
         File[] files = dir.listFiles();
-
+        System.out.println("AutoUpdateReplay: 开始检查有无新视频文件");
         if (files != null) {
+
             for (File file : files) {
                 String filename = file.getName();
                 Matcher matcher = FILENAME_PATTERN.matcher(filename);
 
                 if (matcher.find()) {
+
                     String dateStr = matcher.group(1);
                     String liveTitle = matcher.group(3);
 
@@ -123,15 +125,18 @@ public class ReplayServiceImpl implements ReplayService {
                     Long count = replayMapper.selectCount(queryWrapper);
 
                     if (count == 0) {  // 只有不存在时才插入
+                        System.out.println("AutoUpdateReplay: 发现新的视频文件，进行更新");
                         ReplayVideo replay = new ReplayVideo();
                         replay.setMorningOrEvening(morningOrEvening);
                         replay.setLiveDate(date);
                         replay.setFilename(filename);
                         replay.setLivetitle(liveTitle);
                         replayMapper.insert(replay);
+                        System.out.println("AutoUpdateReplay: 插入新的视频记录: " + replay);
                     }
                 }
             }
+            System.out.println("AutoUpdateReplay: 完成任务");
         }
     }
     @Override

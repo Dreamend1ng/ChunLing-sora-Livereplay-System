@@ -1,7 +1,7 @@
 package com.dreamending.replaylive.service;
 
-import com.dreamending.replaylive.entity.AdminUser;
-import com.dreamending.replaylive.controller.AdminController;
+import jakarta.servlet.http.HttpServletRequest;
+
 /*
     @com.dreamending.replaylive.service
     @Author: Sun Weize - 19393
@@ -9,4 +9,6 @@ import com.dreamending.replaylive.controller.AdminController;
 */public interface AdminService {
     boolean validatePassword(String username, String encryptedPassword);
     boolean adminCheck(String username);
+    boolean loginVerify(String encryptedUsername);
+    String serviceStatus();
 }
