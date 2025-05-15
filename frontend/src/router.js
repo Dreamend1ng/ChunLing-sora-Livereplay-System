@@ -17,7 +17,7 @@ const router = createRouter({
         { path: '/admin/about', component: () => import('./components/admin/AdminAbout.vue')}
     ]  // 补全 routes 数组的闭合括号
 })
-// 添加全局前置守卫
+// 添加全局前置守卫 - 前台
 router.beforeEach(async (to, from, next) => {
     const isExcluded = ['/home', '/login', '/register'].includes(to.path) || to.path.startsWith('/admin')
     if (isExcluded) {
@@ -39,6 +39,48 @@ router.beforeEach(async (to, from, next) => {
         // 打印详细错误信息
         console.error('错误详情:', error.response ? error.response.data : error.message)
         next('/login')
+    }
+})
+// 添加全局前置守卫 - 后台
+router.beforeEach(async (to, from, next) => {
+    // 仅处理/admin路径且排除登录页
+    if (!to.path.startsWith('/admin') || to.path === '/admin') {
+        return next()
+    }
+
+    // 获取存储的管理员用户名
+    const adminUsername = localStorage.getItem('adminUsername')
+    
+    // 未登录时直接跳转后台登录页
+    if (!adminUsername) {
+        return next('/admin')
+    }
+
+    try {
+        const doubleEncoded = btoa(btoa(adminUsername))
+        console.log('加密字符串:', doubleEncoded)
+        
+        // 创建表单数据对象
+        const formData = new FormData()
+        formData.append('encryptedUsername', doubleEncoded)
+
+        // 发送表单数据
+        const { data } = await axios.post('http://localhost:9150/api/admin/loginVerify', formData)
+        console.log(data)
+
+        // 验证结果处理
+        if (data == '1') {
+            next()
+        } else {
+            // 清除无效登录状态
+            localStorage.removeItem('adminUsername')
+            next('/admin')
+        }
+    } catch (error) {
+        console.error('管理员验证失败:', error)
+        // 清除登录状态并跳转后台登录页
+        localStorage.removeItem('adminUsername')
+        next('/admin')
     }
 })
 
