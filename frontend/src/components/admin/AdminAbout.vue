@@ -43,11 +43,15 @@ const menuItems = ref([
 
     <!-- 内容区域 -->
     <main class="content">
-      <router-view v-slot="{ Component }">
-        <transition name="fade" mode="out-in">
-          <component :is="Component" />
-        </transition>
-      </router-view>
+      <!-- 替换原router-view为静态内容 -->
+      <div class="about-content">
+        <p style="font-size: 16px; margin-bottom: 15px;">该系统 Powered By Dreamending - 梦末</p>
+        <p style="font-size: 16px; margin-bottom: 15px;">感谢 MorningStars097 在本站编写过程中提供的帮助。</p>
+        <br><br><br><br><br><br><br><br><br><br>
+        <p style="font-size: 16px; margin-bottom: 15px;">To.咕汁：</p>
+        <p style="font-size: 16px; margin-bottom: 15px;">我们永远爱你。</p><br><br><br><br><br><br><br><br><br><br><br><br><br><br>
+        <p style="font-size: 16px; color: #666;">版权所有 Dreamending</p>
+      </div>
     </main>
   </div>
 </template>

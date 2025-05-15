@@ -1,7 +1,8 @@
 /* eslint-disable */
 <!-- AdminDashboard.vue -->
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import axios from 'axios'  // 新增axios导入
 
 const menuItems = ref([
   { title: '首页', path: '/admin/index' },
@@ -11,10 +12,51 @@ const menuItems = ref([
   { title: '服务状态', path: '/admin/service' },
   { title: '关于', path: '/admin/about' }
 ])
+
+// 新增状态管理
+const serviceStatus = ref('')
+const loading = ref(false)
+const error = ref('')
+
+// 获取服务状态
+const fetchServiceStatus = async () => {
+  loading.value = true
+  error.value = ''
+  try {
+    const res = await axios.get('http://localhost:9150/api/admin/serviceStatus')
+    serviceStatus.value = res.data
+  } catch (err) {
+    error.value = `获取失败：${err.response?.data?.message || err.message}`
+  } finally {
+    loading.value = false
+  }
+}
+
+// 复制到剪贴板（移除空值判断）
+const copyToClipboard = () => {
+  // 直接尝试复制（无内容时会复制空字符串）
+  navigator.clipboard.writeText(serviceStatus.value)
+    .then(() => alert('已复制到剪贴板'))
+    .catch(() => alert('复制失败'))
+}
+
+// 导出日志文件（移除空值判断）
+const exportLog = () => {
+  // 无内容时会导出空文件
+  const blob = new Blob([serviceStatus.value], { type: 'text/plain' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'service-status.log'
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+onMounted(fetchServiceStatus)  // 挂载后自动请求
 </script>
 
 <template>
-  <!-- 顶部导航栏 -->
+  <!-- 顶部导航栏（保持不变） -->
   <nav>
     <div class="logo"></div>
     <h3 class="title">椿忆·时空匣 - 管理后台</h3>
@@ -24,9 +66,9 @@ const menuItems = ref([
     </div>
   </nav>
 
-  <!-- 主内容区 -->
+  <!-- 主内容区（保持不变） -->
   <div class="admin-container">
-    <!-- 侧边栏 -->
+    <!-- 侧边栏（保持不变） -->
     <aside class="sidebar">
       <div class="sidebar-menu">
         <router-link
@@ -41,13 +83,32 @@ const menuItems = ref([
       </div>
     </aside>
 
-    <!-- 内容区域 -->
+    <!-- 内容区域（关键修改） -->
     <main class="content">
-      <router-view v-slot="{ Component }">
-        <transition name="fade" mode="out-in">
-          <component :is="Component" />
-        </transition>
-      </router-view>
+      <div class="status-container">
+        <!-- 操作按钮组（移除 disabled 绑定） -->
+        <div class="button-group">
+          <button 
+            class="btn" 
+            @click="copyToClipboard"
+          >
+            {{ loading ? '加载中...' : '复制内容' }}
+          </button>
+          <button 
+            class="btn" 
+            @click="exportLog"
+          >
+            导出日志
+          </button>
+        </div>
+
+        <!-- 状态显示区域 -->
+        <div class="status-textarea">
+          <pre v-if="error" class="error-text">{{ error }}</pre>
+          <pre v-else-if="loading">正在获取服务状态...</pre>
+          <pre v-else>{{ serviceStatus }}</pre>
+        </div>
+      </div>
     </main>
   </div>
 </template>
@@ -193,5 +254,56 @@ nav {
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+
+/* 新增功能样式 */
+.status-container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.button-group {
+  display: flex;
+  gap: 15px;
+  justify-content: flex-end;
+}
+
+.btn {
+  padding: 8px 20px;
+  border: none;
+  border-radius: 6px;
+  background: #db6677;
+  color: white;
+  cursor: pointer;
+  transition: background 0.3s;
+  font-size: 14px;
+}
+
+.btn:disabled {
+  background: #ddd;
+  cursor: not-allowed;
+}
+
+.btn:hover:not(:disabled) {
+  background: #c55a6a;
+}
+
+.status-textarea {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  overflow: auto;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: pre-wrap; /* 长文本自动换行 */
+}
+
+.error-text {
+  color: #ff4444;
 }
 </style>

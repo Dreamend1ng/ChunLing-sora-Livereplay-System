@@ -26,6 +26,8 @@ const handleLogin = async () => {
     const result = await response.json()
 
     if (result === 1) {
+      // 在登录成功回调中添加
+      localStorage.setItem('adminUsername', username.value)
       router.push('/admin/index')
     } else {
       errorMessage.value = '密码错误，登陆失败'
