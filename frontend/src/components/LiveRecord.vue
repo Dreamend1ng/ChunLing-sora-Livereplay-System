@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import 'video.js/dist/video-js.css'
 import videojs from 'video.js'
 import axios from 'axios'
@@ -12,30 +12,14 @@ const comments = ref([]) // 清空测试数据
 const newComment = ref('')
 const currentUser = ref(window.currentUser || '匿名用户')
 
-//播放器初始化
-/*const playerOptions = ref({
-  autoplay: false,
-  controls: true,
-  fluid: false,
-  responsive: false,
-  controlBar: {
-    progressControl: true,
-    remainingTimeDisplay: false
-  },
-  sources: [{
-    type: "video/mp4",
-    src: ""
-  }]
-})*/
+
 
 // 从API获取回放数据
-const fetchReplays = async (type = 'all') => {
+const fetchReplays = async (date = '') => {
   try {
-    let apiUrl = 'http://localhost:9150/api/replay/getAllReplay';
-    if (type === '打字场') {
-      apiUrl = 'http://localhost:9150/api/replay/getMorningReplay';
-    } else if (type === '聊天场') {
-      apiUrl = 'http://localhost:9150/api/replay/getEveningReplay';
+    let apiUrl = 'http://localhost:9150/api/replay/getReplay';
+    if (date) {
+      apiUrl = `http://localhost:9150/api/replay/getReplayByDate/${date}`;
     }
 
     console.log('Api to request:', apiUrl)
@@ -63,13 +47,11 @@ const fetchReplays = async (type = 'all') => {
           title: replay['LiveTitle'] || '',
           type: replay['SpecialTurn'] || '',
           date: replay['LiveDate'] || '',
-          duration: replay['LiveDuration'] || '',
         }
       })
     } else {
       console.error('数据项类型不正确，有些项不是字符串')
     }
-
     console.log('映射后的 replays:', replays.value)
   } catch (err) {
     error.value = err.message
@@ -137,17 +119,28 @@ onBeforeUnmount(() => {
 })
 
 // 筛选后的回放列表
-const filterType = ref('all')
 const filterDate = ref('')
 let player = null
 
-const filteredReplays = computed(() => {
-  return replays.value.filter(item => {
-    const typeMatch = filterType.value === 'all' || item.type === filterType.value
-    const dateMatch = !filterDate.value || item.date.includes(filterDate.value)
-    return typeMatch && dateMatch
-  })
+// 监听日期筛选条件变化，触发数据重新加载
+watch(filterDate, (newVal) => {
+  if (newVal) {
+    fetchReplays(newVal)
+  } else {
+    fetchReplays()
+  }
 })
+
+/*const filteredReplays = computed(() => {
+  return replays.value.filter(item => {
+    console.log('Filter date:', filterDate.value)
+    const dateMatch = !filterDate.value || item.date.includes(filterDate.value)
+    console.log('Filtering item:', item)
+    console.log('DateMatch:', dateMatch)
+    return dateMatch
+  })
+})*/
+
 
 // 修改后的播放视频函数
 const playVideo = async (id, title) => {
@@ -218,26 +211,21 @@ const submitComment = async () => {
           <template v-else>
             <div class="replay-header">
               <div class="filter-group">
-                <select v-model="filterType" class="soft-filter">
-                  <option value="all">全部类型</option>
-                  <option value="打字场">打字场</option>
-                  <option value="聊天场">聊天场</option>
-                </select>
-                <input type="date" v-model="filterDate" class="soft-filter">
+                
+                <input type="date" v-model="filterDate" @change="fetchReplays(filterDate)" class="soft-filter">
               </div>
             </div>
 
             <div
-                v-for="item in filteredReplays"
+                v-for="item in replays" 
                 :key="item.id"
                 class="replay-item"
                 @click="playVideo(item.id, item.title)"
             >
               <div>{{ item.title }}</div>
               <div class="meta-info">
-                {{ item.type === 'typing' ? '打字场' : '聊天场' }} ·
-                {{ item.date }} ·
-                {{ item.duration }}
+                {{ item.type }} ·
+                {{ item.date }}
               </div>
             </div>
           </template>
@@ -343,13 +331,13 @@ nav {
   border-radius: 8px;
   overflow: hidden;
   width: 800px;      /* 固定宽度 */
-  height: 580px;     /* 固定高度 */
+  height: 615px;     /* 固定高度 */
   margin: 0 auto;    /* 居中显示 */
 }
 
 .video-info {
-  margin-top: 10px;
-  padding: 10px;
+  margin-top: 5px;
+  padding: 5px;
   background-color: #fff;
   border-radius: 4px;
   color: #333;
