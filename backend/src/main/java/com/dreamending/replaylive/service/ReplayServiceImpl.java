@@ -1,6 +1,7 @@
 package com.dreamending.replaylive.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.dreamending.replaylive.entity.ReplayVideo;
 import com.dreamending.replaylive.mapper.cl_replayMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,53 +44,34 @@ public class ReplayServiceImpl implements ReplayService {
     );
 
     @Override
+    public List<String> getReplay() {
+        QueryWrapper<ReplayVideo> queryWrapper = new QueryWrapper<>();
+        queryWrapper.select("id", "live_date", "specialturn", "livetitle")
+                    .eq("hidelive", 0);
+        List<ReplayVideo> replays = replayMapper.selectList(queryWrapper);
+        System.out.println(replays);
+        return replays.stream()
+                .map(replay -> String.format("ID: %s, LiveDate: %s, SpecialTurn: %s, LiveTitle: %s",
+                        replay.getId(),
+                        replay.getLiveDate(),
+                        replay.getSpecialTurn(),
+                        replay.getLivetitle()))
+                .collect(Collectors.toList());
+    }
+    @Override
     public List<String> getAllReplay() {
         QueryWrapper<ReplayVideo> queryWrapper = new QueryWrapper<>();
-        queryWrapper.select("id", "live_date", "specialturn", "morning_or_evening", "livetitle");
+        queryWrapper.select("id", "live_date", "specialturn", "livetitle", "hidelive");
 
         List<ReplayVideo> replays = replayMapper.selectList(queryWrapper);
         System.out.println(replays);
         return replays.stream()
-                .map(replay -> String.format("ID: %s, LiveDate: %s, SpecialTurn: %s, LiveDuration: %s, LiveTitle: %s",
+                .map(replay -> String.format("ID: %s, LiveDate: %s, SpecialTurn: %s, LiveTitle: %s, hidelive: %s",
                         replay.getId(),
                         replay.getLiveDate(),
                         replay.getSpecialTurn(),
-                        replay.isMorningOrEvening() ? "白天" : "晚上",
-                        replay.getLivetitle()))
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    public List<String> getMorningReplay() {
-        QueryWrapper<ReplayVideo> queryWrapper = new QueryWrapper<>();
-        queryWrapper.select("id", "live_date", "specialturn", "morning_or_evening", "livetitle")
-                .eq("morning_or_evening", 0);  // 只查询morningorevening=1的记录
-
-        List<ReplayVideo> replays = replayMapper.selectList(queryWrapper);
-
-        return replays.stream()
-                .map(replay -> String.format("ID: %s, LiveDate: %s, SpecialTurn: %s, LiveTitle: %s",
-                        replay.getId(),
-                        replay.getLiveDate(),
-                        replay.getSpecialTurn(),
-                        replay.getLivetitle()))
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    public List<String> getEveningReplay() {
-        QueryWrapper<ReplayVideo> queryWrapper = new QueryWrapper<>();
-        queryWrapper.select("id", "live_date", "specialturn", "morning_or_evening", "livetitle")
-                .eq("morning_or_evening", 1);  // 只查询morningorevening=0的记录
-
-        List<ReplayVideo> replays = replayMapper.selectList(queryWrapper);
-
-        return replays.stream()
-                .map(replay -> String.format("ID: %s, LiveDate: %s, SpecialTurn: %s, LiveTitle: %s",
-                        replay.getId(),
-                        replay.getLiveDate(),
-                        replay.getSpecialTurn(),
-                        replay.getLivetitle()))
+                        replay.getLivetitle(),
+                        replay.getHidelive()))
                 .collect(Collectors.toList());
     }
 
@@ -116,8 +98,6 @@ public class ReplayServiceImpl implements ReplayService {
                     LocalDateTime localDateTime = LocalDateTime.parse(dateStr, formatter);
                     Date date = Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
 
-                    // 判断白天(8:00-18:00)还是晚上
-                    boolean morningOrEvening = (localDateTime.getHour() >= 7);
 
                     // 创建并填充实体
                     QueryWrapper<ReplayVideo> queryWrapper = new QueryWrapper<>();
@@ -127,7 +107,6 @@ public class ReplayServiceImpl implements ReplayService {
                     if (count == 0) {  // 只有不存在时才插入
                         System.out.println("AutoUpdateReplay: 发现新的视频文件，进行更新");
                         ReplayVideo replay = new ReplayVideo();
-                        replay.setMorningOrEvening(morningOrEvening);
                         replay.setLiveDate(date);
                         replay.setFilename(filename);
                         replay.setLivetitle(liveTitle);
@@ -171,4 +150,51 @@ public class ReplayServiceImpl implements ReplayService {
             return ResponseEntity.internalServerError().build();
         }
     }
+    @Override
+    public List<String> getReplayByDate(String date) {
+        QueryWrapper<ReplayVideo> queryWrapper = new QueryWrapper<>();
+        // 使用DATE()函数匹配日期部分
+        queryWrapper.apply("DATE(live_date) = {0}", date);
+
+        List<ReplayVideo> replays = replayMapper.selectList(queryWrapper);
+        return replays.stream()
+                .map(replay -> String.format("ID: %s, LiveDate: %s, SpecialTurn: %s, LiveTitle: %s",
+                        replay.getId(),
+                        replay.getLiveDate(),
+                        replay.getSpecialTurn(),
+                        replay.getLivetitle()))
+                .collect(Collectors.toList());
+    }
+    @Override
+    public String hideReplay(String id) {
+        UpdateWrapper<ReplayVideo> updateWrapper = new UpdateWrapper<>();
+        updateWrapper.setSql("hidelive = ABS(hidelive - 1)") // 使用数值翻转
+                   .eq("id", id);
+
+        int result = replayMapper.update(null, updateWrapper);
+        return result > 0 ? "状态切换成功" : "操作失败";
+    }
+    @Override
+    public String changeReplay(String id, String livetitle, String specialTurn)  {
+            // 检查至少有一个参数需要更新
+            if ((livetitle == null || livetitle.isEmpty()) &&
+                    (specialTurn == null || specialTurn.isEmpty())) {
+                return "至少需要提供一个更新参数（直播标题或特殊场次）";
+            }
+
+            UpdateWrapper<ReplayVideo> updateWrapper = new UpdateWrapper<>();
+            updateWrapper.eq("id", id);
+
+            // 动态设置更新字段
+            if (livetitle != null && !livetitle.isEmpty()) {
+                updateWrapper.set("livetitle", livetitle);
+            }
+            if (specialTurn != null && !specialTurn.isEmpty()) {
+                updateWrapper.set("specialturn", specialTurn);
+            }
+
+            int result = replayMapper.update(null, updateWrapper);
+            return result > 0 ? "修改成功" : "修改失败（可能未找到记录）";
+    }
 }
+

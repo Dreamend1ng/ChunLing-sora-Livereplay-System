@@ -13,5 +13,7 @@ import java.util.UUID;
     boolean validatePassword(String username, String encryptedPassword);
     boolean registerUser(String username, String password, String mail);
     boolean roleCheck(String username);
-
+    String changePassword(String username, String newPassword);
+    boolean roleUpdate(String username, String role);
+    boolean copyUserToAdmin(String username);
 }

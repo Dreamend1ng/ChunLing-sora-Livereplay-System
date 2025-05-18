@@ -1,8 +1,10 @@
 package com.dreamending.replaylive.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.dreamending.replaylive.entity.AdminUser;
 import com.dreamending.replaylive.entity.User;
 import com.dreamending.replaylive.mapper.cl_usersMapper;
+import com.dreamending.replaylive.mapper.cl_adminMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
@@ -74,5 +76,56 @@ public class UserServiceImpl implements UserService {
         // 添加空值判断并检查角色
         return user != null && "admin".equals(user.getRole());
     }
+    @Override
+    public String changePassword(String username, String newPassword) {
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("username", username); // 添加用户名查询条件
+        User user = usersMapper.selectOne(queryWrapper);
+
+        if (user != null) {
+            user.setPassword(DigestUtils.md5DigestAsHex(newPassword.getBytes()));
+            int result = usersMapper.updateById(user);
+            return result > 0 ? "1" : "Failed."; // 根据实际更新结果返回
+        }
+        return "用户不存在";
+    }
+    @Autowired
+    private cl_adminMapper adminMapper;
+    @Override
+    public boolean roleUpdate(String username, String newRole) {
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("username", username);
+
+        User user = usersMapper.selectOne(queryWrapper);
+        if (user != null) {
+            user.setRole(newRole);
+            return usersMapper.updateById(user) > 0;
+        }
+        return false;
+    }
+
+    @Override
+    public boolean copyUserToAdmin(String username) {
+        // 获取用户信息
+        QueryWrapper<User> userQuery = new QueryWrapper<>();
+        userQuery.eq("username", username);
+        User user = usersMapper.selectOne(userQuery);
+
+        if (user != null) {
+            // 检查是否已存在管理员账户
+            QueryWrapper<AdminUser> adminQuery = new QueryWrapper<>();
+            adminQuery.eq("username", username);
+
+            if (adminMapper.selectCount(adminQuery) == 0) {
+                AdminUser adminUser = new AdminUser();
+                adminUser.setUsername(user.getUsername());
+                adminUser.setPassword(user.getPassword());
+                return adminMapper.insert(adminUser) > 0;
+            }
+        }
+        return false;
+    }
+
+
 
 }

@@ -9,9 +9,12 @@ import org.springframework.http.ResponseEntity;
     @Author: Sun Weize - 19393
     @date 2025-04-15  09:23
 */public interface ReplayService {
+    List<String> getReplay();
     List<String> getAllReplay();
-    List<String> getMorningReplay();
-    List<String> getEveningReplay();
     void AutoUpdateReplay();
     ResponseEntity<Resource> playReplay(String id);
+    List<String> getReplayByDate(String date);
+    String hideReplay(String id);
+    String changeReplay(String id, String livetitle, String specialturn);
+
 }
