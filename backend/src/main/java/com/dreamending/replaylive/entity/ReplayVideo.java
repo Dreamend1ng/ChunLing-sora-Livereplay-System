@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
+import org.apache.ibatis.type.JdbcType;
 
 import java.util.Date;
 
@@ -21,8 +22,8 @@ public class ReplayVideo {
     @TableId(type = IdType.INPUT)
     @TableField(value = "id")
     private String id;
-    @TableField(value = "morning_or_evening")
-    private boolean MorningOrEvening;
+    @TableField(value = "hidelive", jdbcType = JdbcType.TINYINT)
+    private boolean hidelive;
     @TableField(value = "live_date")
     private Date LiveDate;
     @TableField(value = "specialturn")
@@ -36,12 +37,20 @@ public class ReplayVideo {
     public String toString() {
         return "ReplayVideo{" +
                 "id='" + id + '\'' +
-                ", MorningOrEvening=" + MorningOrEvening +
+                ", hidelive=" + hidelive +
                 ", LiveDate=" + LiveDate +
-                ", isSpecialTurn='" + SpecialTurn + '\'' +
-                ", filename='" + Filename + '\'' +
-                ", livetitle='" + Livetitle + '\'' +
+                ", SpecialTurn='" + SpecialTurn + '\'' +
+                ", Filename='" + Filename + '\'' +
+                ", Livetitle='" + Livetitle + '\'' +
                 '}';
+    }
+
+    public String getHidelive() {
+        return Boolean.toString(hidelive);
+    }
+
+    public void setHidelive(boolean hidelive) {
+        this.hidelive = hidelive;
     }
 
     public String getId() {
@@ -52,13 +61,7 @@ public class ReplayVideo {
         this.id = id;
     }
 
-    public boolean isMorningOrEvening() {
-        return MorningOrEvening;
-    }
 
-    public void setMorningOrEvening(boolean morningOrEvening) {
-        MorningOrEvening = morningOrEvening;
-    }
 
     public Date getLiveDate() {
         return LiveDate;
